@@ -1,8 +1,10 @@
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 
 
@@ -35,6 +37,11 @@ public class SqlConnectionStream {
     this("com.mysql.jdbc.Driver", "jdbc:mysql://us-cdbr-azure-west-b.cleardb.com:3306/acsm_676dbbe84ea3d8c", "be234364e375d8", "e60754d2");
   }
 
+  public int executeUpdate() {
+    return 1;
+  }
+
+
   public void closeConnections(Connection mySql, AutoCloseable auxilary) {
     //To be called after all SQL querys and updates.
     //Closes the primary connection object and whatever secondary
@@ -60,13 +67,36 @@ public class SqlConnectionStream {
 
   }
 
+  private int executeUpdate(String updateStatement) {
+    Connection mySql = null;
+    Statement statement = null;
+    int affectedRows = 0;
+    try {
+      mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+      statement = mySql.createStatement();
+      affectedRows = statement.executeUpdate(updateStatement);
+      System.out.println("Executed update.");
+    }
+    catch(SQLException se){
+      se.printStackTrace();
+    }
+    catch(Exception e){
+      e.printStackTrace();
+    }
+    closeConnections(mySql, statement);
+    return affectedRows;
+  }
+
+  public void createTable(String tableCreateStatement) {
+    executeUpdate(tableCreateStatement);
+  }
+
   public void printDatabaseSchema() {
     Connection mySql = null;
-    PreparedStatement pst = null;
     ResultSet rs = null;
     try {
       mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
-      pst = mySql.prepareStatement("SELECT * FROM information_schema.COLUMNS;");
+      PreparedStatement pst = mySql.prepareStatement("SELECT * FROM information_schema.COLUMNS;");
       rs = pst.executeQuery();
       simplePrintResultSet(rs);
     }

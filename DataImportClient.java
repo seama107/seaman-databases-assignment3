@@ -13,7 +13,7 @@ public class DataImportClient {
     {
       return;
     }
-
+    //sdi.createTables();
     sdi.printDatabaseSchema();
     try {
       System.out.println(sdi.readTuple());
