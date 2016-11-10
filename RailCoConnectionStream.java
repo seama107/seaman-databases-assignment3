@@ -15,14 +15,13 @@ public class RailCoConnectionStream extends SqlConnectionStream {
     public int insertRailCoCustomers(String firstName, String lastName) {
       Connection mySql = null;
       ResultSet rs = null;
+      PreparedStatement pst = null;
       int customer_id = -1;
       try {
         mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
         String insertString = "INSERT INTO railCoCustomers(first_name, last_name) VALUES (?, ?);";
-        PreparedStatement pst = mySql.prepareStatement(insertString);
-        pst.setString(1, firstName);
-        pst.setString(2, lastName);
-        System.out.println(pst);
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareCustomerStatement(pst, firstName, lastName);
         int affectedRows = pst.executeUpdate();
         printInsertFeedback(affectedRows);
         if(affectedRows > 0) {
@@ -31,6 +30,8 @@ public class RailCoConnectionStream extends SqlConnectionStream {
 
       }
       catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
         se.printStackTrace();
       }
       catch(Exception e){
@@ -40,26 +41,56 @@ public class RailCoConnectionStream extends SqlConnectionStream {
       return customer_id;
     }
 
+    public PreparedStatement prepareCustomerStatement(PreparedStatement pst, String firstName, String lastName) throws SQLException {
+      pst.setString(1, firstName);
+      pst.setString(2, lastName);
+      return pst;
+    }
+
+    public InsertResponse getCustomerMembership(String firstName, String lastName) {
+      Connection mySql = null;
+      ResultSet rs = null;
+      PreparedStatement pst = null;
+      InsertResponse tableMembership = new InsertResponse();
+      sqlBlock: try {
+        mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+        String insertString = "SELECT * FROM railCoCustomers WHERE (first_name, last_name) = (?, ?);";
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareCustomerStatement(pst, firstName, lastName);
+        rs = pst.executeQuery();
+        tableMembership = getTableMembership(rs);
+      }
+      catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
+        se.printStackTrace();
+      }
+      catch(Exception e){
+        e.printStackTrace();
+      }
+      closeConnections(new AutoCloseable[]{mySql, rs});
+      return tableMembership;
+    }
+
     public int insertRailCoItems(int item_id, String item_name, String item_manf, double price) {
       Connection mySql = null;
       ResultSet rs = null;
+      PreparedStatement pst = null;
       int item_return_id = -1;
       try {
         mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
         String insertString = "INSERT INTO railCoItems(item_id, item_name, item_manf, price) VALUES (?, ?, ?, ?);";
-        PreparedStatement pst = mySql.prepareStatement(insertString);
-        pst.setInt(1, item_id);
-        pst.setString(2, item_name);
-        pst.setString(3, item_manf);
-        pst.setDouble(4, price);
-        System.out.println(pst);
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareItemStatement(pst, item_id, item_name, item_manf, price);
         int affectedRows = pst.executeUpdate();
         printInsertFeedback(affectedRows);
         if(affectedRows > 0) {
-          item_return_id = lastInsertID(mySql, rs);
+          item_return_id = item_id;
         }
       }
       catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
         se.printStackTrace();
       }
       catch(Exception e){
@@ -69,25 +100,57 @@ public class RailCoConnectionStream extends SqlConnectionStream {
       return item_return_id;
     }
 
+    public PreparedStatement prepareItemStatement(PreparedStatement pst, int item_id, String item_name, String item_manf, double price) throws SQLException {
+      pst.setInt(1, item_id);
+      pst.setString(2, item_name);
+      pst.setString(3, item_manf);
+      pst.setDouble(4, price);
+      return pst;
+    }
+
+    public InsertResponse getItemMembership(int item_id) {
+      Connection mySql = null;
+      ResultSet rs = null;
+      PreparedStatement pst = null;
+      InsertResponse tableMembership = new InsertResponse();
+      sqlBlock: try {
+        mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+        String insertString = "SELECT * FROM railCoItems WHERE (item_id) = (?);";
+        pst = mySql.prepareStatement(insertString);
+        pst.setInt(1,item_id);
+        rs = pst.executeQuery();
+        tableMembership = getTableMembership(rs);
+      }
+      catch(SQLException se){
+        System.out.println("PreparedStatement");
+        System.out.println(pst);
+        se.printStackTrace();
+      }
+      catch(Exception e){
+        e.printStackTrace();
+      }
+      closeConnections(new AutoCloseable[]{mySql, rs});
+      return tableMembership;
+    }
+
     public int insertRailCoCustomerPhones(int customer_id, String phone_number, String type) {
       Connection mySql = null;
       ResultSet rs = null;
+      PreparedStatement pst = null;
       int phone_id = -1;
       try {
         mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
         String insertString = "INSERT INTO railCoCustomerPhones(customer_id, phone_number, type) VALUES (?, ?, ?);";
-        PreparedStatement pst = mySql.prepareStatement(insertString);
-        pst.setInt(1, customer_id);
-        pst.setString(2, phone_number);
-        pst.setString(3, type);
-        System.out.println(pst);
+        pst = mySql.prepareStatement(insertString);
+        pst = preparePhoneStatement(pst, customer_id, phone_number, type);
         int affectedRows = pst.executeUpdate();
-        printInsertFeedback(affectedRows);
         if(affectedRows > 0) {
           phone_id = lastInsertID(mySql, rs);
         }
       }
       catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
         se.printStackTrace();
       }
       catch(Exception e){
@@ -97,19 +160,50 @@ public class RailCoConnectionStream extends SqlConnectionStream {
       return phone_id;
     }
 
+    public PreparedStatement preparePhoneStatement(PreparedStatement pst, int customer_id, String phone_number, String type)  throws SQLException {
+      pst.setInt(1, customer_id);
+      pst.setString(2, phone_number);
+      pst.setString(3, type);
+      return pst;
+    }
+
+    public InsertResponse getPhoneMembership(int customer_id, String phone_number, String type) {
+      //Returns -1 if phone# is not in the table, and the id
+      //of the phone# if they are in the table
+      Connection mySql = null;
+      ResultSet rs = null;
+      PreparedStatement pst = null;
+      InsertResponse tableMembership = new InsertResponse();
+      sqlBlock: try {
+        mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+        String insertString = "SELECT * FROM railCoCustomerPhones WHERE (customer_id, phone_number, type) = (?, ?, ?);";
+        pst = mySql.prepareStatement(insertString);
+        pst = preparePhoneStatement(pst, customer_id, phone_number, type);
+        rs = pst.executeQuery();
+        tableMembership = getTableMembership(rs);
+      }
+      catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
+        se.printStackTrace();
+      }
+      catch(Exception e){
+        e.printStackTrace();
+      }
+      closeConnections(new AutoCloseable[]{mySql, rs});
+      return tableMembership;
+    }
+
     public int insertRailCoStores(String street_address, int zipcode, String city, String state) {
       Connection mySql = null;
       ResultSet rs = null;
+      PreparedStatement pst = null;
       int store_id = -1;
       try {
         mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
         String insertString = "INSERT INTO railCoStores(street_address, zipcode, city, state) VALUES (?, ?, ?, ?);";
-        PreparedStatement pst = mySql.prepareStatement(insertString);
-        pst.setString(1, street_address);
-        pst.setInt(2, zipcode);
-        pst.setString(3, city);
-        pst.setString(4, state);
-        System.out.println(pst);
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareStoresStatement(pst, street_address, zipcode, city, state);
         int affectedRows = pst.executeUpdate();
         printInsertFeedback(affectedRows);
         if(affectedRows > 0) {
@@ -117,6 +211,8 @@ public class RailCoConnectionStream extends SqlConnectionStream {
         }
       }
       catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
         se.printStackTrace();
       }
       catch(Exception e){
@@ -126,19 +222,49 @@ public class RailCoConnectionStream extends SqlConnectionStream {
       return store_id;
     }
 
+    public PreparedStatement prepareStoresStatement(PreparedStatement pst, String street_address, int zipcode, String city, String state) throws SQLException  {
+      pst.setString(1, street_address);
+      pst.setInt(2, zipcode);
+      pst.setString(3, city);
+      pst.setString(4, state);
+      return pst;
+    }
+
+    public InsertResponse getStoreMembership(String street_address, int zipcode, String city, String state) {
+      Connection mySql = null;
+      ResultSet rs = null;
+      PreparedStatement pst = null;
+      InsertResponse tableMembership = new InsertResponse();
+      sqlBlock: try {
+        mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+        String insertString = "SELECT * FROM railCoStores WHERE (street_address, zipcode, city, state) = (?, ?, ?, ?);";
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareStoresStatement(pst, street_address, zipcode, city, state);
+        rs = pst.executeQuery();
+        tableMembership = getTableMembership(rs);
+      }
+      catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
+        se.printStackTrace();
+      }
+      catch(Exception e){
+        e.printStackTrace();
+      }
+      closeConnections(new AutoCloseable[]{mySql, rs});
+      return tableMembership;
+    }
+
     public int insertRailCoTransactions(int item_id, int customer_id, int store_id, Timestamp timestamp) {
       Connection mySql = null;
       ResultSet rs = null;
+      PreparedStatement pst = null;
       int transaction_id = -1;
       try {
         mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
         String insertString = "INSERT INTO railCoTransactions(item_id, customer_id, store_id, timestamp) VALUES (?, ?, ?, ?);";
-        PreparedStatement pst = mySql.prepareStatement(insertString);
-        pst.setInt(1, item_id);
-        pst.setInt(2, customer_id);
-        pst.setInt(3, store_id);
-        pst.setTimestamp(4, timestamp);
-        System.out.println(pst);
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareTransactionStatement(pst, item_id, customer_id, store_id, timestamp);
         int affectedRows = pst.executeUpdate();
         printInsertFeedback(affectedRows);
         if(affectedRows > 0) {
@@ -146,6 +272,8 @@ public class RailCoConnectionStream extends SqlConnectionStream {
         }
       }
       catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
         se.printStackTrace();
       }
       catch(Exception e){
@@ -155,24 +283,114 @@ public class RailCoConnectionStream extends SqlConnectionStream {
       return transaction_id;
     }
 
+    public PreparedStatement prepareTransactionStatement(PreparedStatement pst, int item_id, int customer_id, int store_id, Timestamp timestamp) throws SQLException  {
+      pst.setInt(1, item_id);
+      pst.setInt(2, customer_id);
+      pst.setInt(3, store_id);
+      pst.setTimestamp(4, timestamp);
+      return pst;
+    }
+
+
+    public InsertResponse getTransactionMembership(int item_id, int customer_id, int store_id, Timestamp timestamp) {
+      Connection mySql = null;
+      ResultSet rs = null;
+      PreparedStatement pst = null;
+      InsertResponse tableMembership = new InsertResponse();
+      sqlBlock: try {
+        mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+        String insertString = "SELECT * FROM railCoTransactions WHERE (item_id, customer_id, store_id, timestamp) = (?, ?, ?, ?);";
+        pst = mySql.prepareStatement(insertString);
+        pst = prepareTransactionStatement(pst, item_id, customer_id, store_id, timestamp);
+        rs = pst.executeQuery();
+        tableMembership = getTableMembership(rs);
+      }
+      catch(SQLException se){
+        System.out.println("PreparedStatement:");
+        System.out.println(pst);
+        se.printStackTrace();
+      }
+      catch(Exception e){
+        e.printStackTrace();
+      }
+      closeConnections(new AutoCloseable[]{mySql, rs});
+      return tableMembership;
+    }
+
+    public InsertResponse getTableMembership(ResultSet rs) throws Exception {
+      int id = -1;
+      boolean newMembership = true;
+      rs.last();
+      int resultSetSize = rs.getRow();
+      if(resultSetSize != 0) {
+        //Meaning there is an existing record already in the table
+        rs.first();
+        String firstIDString =  rs.getString(1);
+        rs.beforeFirst();
+        id = Integer.parseInt(firstIDString);
+        newMembership = false;
+      }
+      return new InsertResponse(newMembership, id);
+    }
+
+
     public void printInsertFeedback(int rowsAffected) {
       if(rowsAffected == 0) {
         System.out.println("Unsucessful Insert.");
       }
       else {
-        System.out.println( String.format( "Inserted successfully, %d rows affected.", rowsAffected));
+        System.out.println( String.format( "\t\tInserted successfully, %d rows affected.", rowsAffected));
       }
     }
 
     public int lastInsertID(Connection mySql, ResultSet rs) throws Exception {
       PreparedStatement pst = mySql.prepareStatement("SELECT LAST_INSERT_ID();");
       rs = pst.executeQuery();
-      rs.next();
-      String s =  rs.getString(1);
-      System.out.println(s);
-      int output = Integer.parseInt(s);
-      System.out.println(output);
+      return returnIntFromSingletonResult(rs);
+    }
+
+    public int returnIntFromSingletonResult(ResultSet rs) throws Exception {
+      rs.first();
+      String singleValue =  rs.getString(1);
+      int output = Integer.parseInt(singleValue);
       return output;
+    }
+
+    public void resetDatabaseTables() {
+      dropDatabaseTables();
+      createDatabaseTables();
+    }
+
+
+    public void dropDatabaseTables() {
+      //Not to be used in the application, just for cleaning and debugging
+
+      String dropTransactionsStatement = "DROP TABLE railCoTransactions;";
+      String dropCustomerPhonesStatement = "DROP TABLE railCoCustomerPhones;";
+      String dropCustomersStatement = "DROP TABLE railCoCustomers;";
+      String dropStoresStatement = "DROP TABLE railCoStores;";
+      String dropItemsStatement = "DROP TABLE railCoItems;";
+
+      if(databaseHasTable("railCoCustomerPhones")) {
+        System.out.println("Deleteing railCoCustomerPhones");
+        executeUpdate(dropCustomerPhonesStatement);
+      }
+      if(databaseHasTable("railCoTransactions")) {
+        System.out.println("Deleteing railCoTransactions");
+        executeUpdate(dropTransactionsStatement);
+      }
+      if(databaseHasTable("railCoCustomers")) {
+        System.out.println("Deleteing railCoCustomers");
+        executeUpdate(dropCustomersStatement);
+      }
+      if(databaseHasTable("railCoStores")) {
+        System.out.println("Deleteing railCoStores");
+        executeUpdate(dropStoresStatement);
+      }
+      if(databaseHasTable("railCoItems")) {
+        System.out.println("Deleteing railCoItems");
+        executeUpdate(dropItemsStatement);
+      }
     }
 
     public void createDatabaseTables() {
@@ -213,11 +431,25 @@ public class RailCoConnectionStream extends SqlConnectionStream {
     "FOREIGN KEY (customer_id) REFERENCES railCoCustomers(customer_id)," +
     "FOREIGN KEY (store_id) REFERENCES railCoStores(store_id));";
 
-
+    if(!(databaseHasTable("railCoCustomers"))) {
+      System.out.println("Creating railCoCustomers");
       executeUpdate(createCustomersStatement);
-      executeUpdate(createCustomerPhonesStatement);
+    }
+    if(!(databaseHasTable("railCoStores"))) {
+      System.out.println("Creating railCoStores");
       executeUpdate(createStoresStatement);
+    }
+    if(!(databaseHasTable("railCoItems"))) {
+      System.out.println("Creating railCoStores");
       executeUpdate(createItemsStatement);
+    }
+    if(!(databaseHasTable("railCoCustomerPhones"))) {
+      System.out.println("Creating railCoCustomerPhones");
+      executeUpdate(createCustomerPhonesStatement);
+    }
+    if(!(databaseHasTable("railCoTransactions"))) {
+      System.out.println("Creating railCoTransactions");
       executeUpdate(createTransactionsStatement);
     }
+  }
 }

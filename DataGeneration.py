@@ -45,7 +45,7 @@ def createItem():
 
     item = (random.randint(1,1000000000),
         fake.word().encode("ascii") + ' ' + ' '.join(fake.bs().encode("ascii").split(' ')[-2:]),
-        fake.company().encode("ascii"),
+        fake.company().encode("ascii").replace(",",""),
         random.randint(1,1000) * .25)
     return item
 

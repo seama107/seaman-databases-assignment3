@@ -68,12 +68,34 @@ public class SqlConnectionStream {
     return affectedRows;
   }
 
-  public void executeQuery(String queryStatement) {
+  public boolean databaseHasTable(String tableName) {
+    Connection mySql = null;
+    ResultSet rs = null;
+    boolean output = false;
+    try {
+      mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
+      PreparedStatement pst = mySql.prepareStatement( String.format("SHOW TABLES LIKE '%s';", tableName ));
+      rs = pst.executeQuery();
+      rs.last();
+      int resultSetSize = rs.getRow();
+      output = (resultSetSize != 0);
+    }
+    catch(SQLException se){
+      se.printStackTrace();
+    }
+    catch(Exception e){
+      e.printStackTrace();
+    }
+    closeConnections(new AutoCloseable[]{mySql, rs});
+    return output;
+  }
+
+  public void showTable(String tableName) {
     Connection mySql = null;
     ResultSet rs = null;
     try {
       mySql = DriverManager.getConnection(connectionURL, mySqlUsername, mySqlPassword);
-      PreparedStatement pst = mySql.prepareStatement(queryStatement);
+      PreparedStatement pst = mySql.prepareStatement( String.format("SELECT * FROM %s;", tableName ));
       rs = pst.executeQuery();
       simplePrintResultSet(rs);
     }
@@ -88,10 +110,6 @@ public class SqlConnectionStream {
 
   public void printDatabaseSchema() {
     showTable("information_schema.COLUMNS;");
-  }
-
-  public void showTable(String tableName) {
-    executeQuery(String.format("SELECT * FROM %s;", tableName ));
   }
 
   public void simplePrintResultSet(ResultSet rs) throws Exception {
