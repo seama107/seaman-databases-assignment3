@@ -2,12 +2,13 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 
 
 public class SalesDataImporter {
   private File dataCSVFile;
   private BufferedReader dataReader;
-  private SqlConnectionStream sqlCon;
+  private RailCoConnectionStream sqlCon;
 
   public SalesDataImporter(File dat) {
     //I'm in the middle of adding the SQl connection Stream
@@ -15,7 +16,7 @@ public class SalesDataImporter {
     //method
 
     //dont forget I need to check for sqlCon.hasDriver()
-    sqlCon = new SqlConnectionStream();
+    sqlCon = new RailCoConnectionStream();
     dataCSVFile = dat;
     try {
       dataReader = new BufferedReader(new FileReader(dataCSVFile));
@@ -30,61 +31,98 @@ public class SalesDataImporter {
     this(new File("salesData.csv"));
   }
 
+  public void importUnstructuredData() {
+    try {
+      processTuple(readTuple());
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+
+  }
+
 
   public void processTuple(String[] tuple){
-
+    /*
+    timestamp,address,zip,city,state,item_id,item_name,item_manf,price,first,last,home,cell
+    */
+    int zip = 11111;
+    double price = 0.0;
+    int item_id = 1;
+    try {
+      zip = Integer.parseInt(tuple[2]);
+      System.out.println(String.format("zip: %d", zip));
+      price = Double.parseDouble(tuple[8]);
+      System.out.println(String.format("price: %f", price));
+      item_id = Integer.parseInt(tuple[5]);
+      System.out.println(String.format("item_id: %d", item_id));
+    }
+    catch(Exception e) {
+      e.printStackTrace();
+    }
+    insertCustomer(tuple[9], tuple[10]);
+    insertStore(tuple[1], zip, tuple[3], tuple[4]);
+    insertCustomerPhone(1, tuple[12], "cell");
+    insertItem(item_id, tuple[6], tuple[7], price);
+    insertTransaction(1,1,1, Timestamp.valueOf(tuple[0]) );
   }
 
   public String[] readTuple() throws Exception {
     return dataReader.readLine().split(",");
   }
 
-  public void createTables() {
-    //Not to be used in the application, just for the inital
-    //creation of the schema
-    String createCustomersStatement = "CREATE TABLE railCoCustomers(" +
-  "customer_id INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT," +
-  "first_name VARCHAR(25)," +
-  "last_name VARCHAR(25));";
-
-    String createCustomerPhonesStatement = "CREATE TABLE railCoCustomerPhones(" +
-  "phone_id INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT," +
-  "customer_id INT UNSIGNED," +
-  "phone_number VARCHAR(30)," +
-  "type VARCHAR(4)," +
-  "FOREIGN KEY (customer_id) REFERENCES railCoCustomers(customer_id));";
-
-    String createStoresStatement = "CREATE TABLE railCoStores(" +
-  "store_id INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT," +
-  "street_address VARCHAR(50)," +
-  "zipcode INT UNSIGNED," +
-  "city VARCHAR(20)," +
-  "state VARCHAR(2));";
-
-    String createItemsStatement = "CREATE TABLE railCoItems(" +
-  "item_id INT UNSIGNED PRIMARY KEY NOT NULL," +
-  "item_name VARCHAR(50)," +
-  "item_manf VARCHAR(50)," +
-  "price DECIMAL(8,2));";
-
-    String createTransactionsStatement = "CREATE TABLE railCoTransactions(" +
-  "transaction_id INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT," +
-  "item_id INT UNSIGNED," +
-  "customer_id INT UNSIGNED," +
-  "store_id INT UNSIGNED," +
-  "timestamp DATETIME," +
-  "FOREIGN KEY (item_id) REFERENCES railCoItems(item_id)," +
-  "FOREIGN KEY (customer_id) REFERENCES railCoCustomers(customer_id)," +
-  "FOREIGN KEY (store_id) REFERENCES railCoStores(store_id));";
-
-
-    sqlCon.createTable(createCustomersStatement);
-    sqlCon.createTable(createCustomerPhonesStatement);
-    sqlCon.createTable(createStoresStatement);
-    sqlCon.createTable(createItemsStatement);
-    sqlCon.createTable(createTransactionsStatement);
+  public void insertCustomer(String firstName, String lastName) {
+    int customer_id = sqlCon.insertRailCoCustomers(firstName, lastName);
   }
 
+  public void insertItem(int item_id, String item_name, String item_manf, double price) {
+    int item_id = sqlCon.insertRailCoItems(item_id, item_name, item_manf, price);
+  }
+
+  public void insertCustomerPhone(int customer_id, String phone_number, String type) {
+    int phone_id = sqlCon.insertRailCoCustomerPhones(customer_id, phone_number, type);
+  }
+
+  public void insertStore(String street_address, int zipcode, String city, String state) {
+    int store_id = sqlCon.insertRailCoStores(street_address, zipcode, city, state);
+  }
+
+  public void insertTransaction(int item_id, int customer_id, int store_id, Timestamp timestamp) {
+    int transaction_id = sqlCon.insertRailCoTransactions(item_id, customer_id, store_id, timestamp);
+  }
+
+  public void createTables() {
+    sqlCon.createDatabaseTables();
+  }
+
+  public void displayAllTables() {
+    System.out.println("\nCustomers Table:\n");
+    showCustomersTable();
+    System.out.println("\nItems Table:\n");
+    showItemsTable();
+    System.out.println("\nTransactions Table:\n");
+    showTransactionsTable();
+    System.out.println("\nStores Table:\n");
+    showStoresTable();
+    System.out.println("\nCustomers' Phones Table:\n");
+    showCustomerPhonesTable();
+  }
+
+  public void showCustomersTable() {
+    sqlCon.showTable("railCoCustomers");
+  }
+  public void showItemsTable() {
+    sqlCon.showTable("railCoItems");
+  }
+  public void showTransactionsTable() {
+    sqlCon.showTable("railCoTransactions");
+  }
+  public void showStoresTable() {
+    sqlCon.showTable("railCoStores");
+  }
+  public void showCustomerPhonesTable() {
+    sqlCon.showTable("railCoCustomerPhones");
+  }
 
   public void printDatabaseSchema() {
     sqlCon.printDatabaseSchema();

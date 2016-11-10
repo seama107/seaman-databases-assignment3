@@ -13,14 +13,14 @@ public class DataImportClient {
     {
       return;
     }
-    //sdi.createTables();
-    sdi.printDatabaseSchema();
+    sdi.importUnstructuredData();
     try {
-      System.out.println(sdi.readTuple());
+      sdi.readTuple();
     }
     catch(Exception e) {
       e.printStackTrace();
     }
+    sdi.displayAllTables();
     sdi.quitelyClose();
   }
 
